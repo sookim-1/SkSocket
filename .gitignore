@@ -51,6 +51,7 @@ Carthage/Build/
 ### SwiftPackageManager ###
 Packages
 xcuserdata
+.swiftpm/
 
 #-------------------------------------- 4. 라이브러리 --------------------------------------
 
