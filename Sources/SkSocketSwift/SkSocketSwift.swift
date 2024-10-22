@@ -1,5 +1,6 @@
 import Foundation
 
+// MARK: - Model
 public class EmitEvent<T: Encodable>: Encodable {
     var event: String
     var data: T?
@@ -22,16 +23,13 @@ public class AuthChannel: Encodable {
 
 // isConnected(), connect(), disconnect(), setBasicListener, subscribe, onChannel, unsubscribe
 
+// MARK: - Main
 public class SkSocketClient {
 
     // MARK: - Listner
-    typealias EmitAckHandler = (String, AnyObject?, AnyObject?) -> Void
     typealias OnListenerHandler = (String, AnyObject?) -> Void
-    typealias OnAckListenerHandler = (String, AnyObject?, (AnyObject?, AnyObject?) -> Void) -> Void
 
-    var emitAckListener: [Int: (String, EmitAckHandler)] = [:]
     var onListener: [String : OnListenerHandler] = [:]
-    var onAckListener: [String: OnAckListenerHandler] = [:]
 
 
     // MARK: - Origin
@@ -102,6 +100,7 @@ public class SkSocketClient {
 
 }
 
+// MARK: - Integer
 public final class AtomicInteger {
 
     private let lock = DispatchSemaphore(value: 1)
@@ -143,6 +142,7 @@ public final class AtomicInteger {
 
 }
 
+// MARK: - Encodable Extension
 public extension Encodable {
 
     func toJSONString(prettyPrint: Bool = false) -> String? {
