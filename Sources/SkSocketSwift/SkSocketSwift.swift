@@ -24,7 +24,7 @@ public class AuthChannel: Encodable {
 // isConnected(), connect(), disconnect(), setBasicListener, subscribe, onChannel, unsubscribe
 
 // MARK: - Main
-public class SkSocketClient {
+public class SkSocketClient: NSObject {
 
     // MARK: - Listner
     typealias OnListenerHandler = (String, AnyObject?) -> Void
@@ -43,15 +43,21 @@ public class SkSocketClient {
     var counter: AtomicInteger = AtomicInteger()
 
     // MARK: - WebSocket
-    var socket: URLSessionWebSocketTask?
+    var socket: URLSessionWebSocketTask
 
-    public convenience init(url: String) {
-        self.init()
-
+    public init(url: String) {
         if let url = URL(string: url) {
             let request = URLRequest(url: url)
             self.socket = URLSession.shared.webSocketTask(with: request)
+        } else {
+            self.socket = URLSession.shared.webSocketTask(with: URL(string: "")!)
         }
+
+        super.init()
+    }
+
+    deinit {
+        self.socket.cancel(with: .goingAway, reason: nil)
     }
 
     public func setBasicListener(onConnect: OnConnectHandler?, onConnectError: OnConnectErrorHandler?, onDisconnect: OnConnectErrorHandler?) {
@@ -61,36 +67,40 @@ public class SkSocketClient {
     }
 
     public func connect() {
-        socket?.resume()
+        socket.resume()
     }
 
     public func isConnected() -> Bool {
-        return socket?.state == .running
+        return socket.state == .running
     }
 
     public func disconnect() {
-        socket?.cancel()
+        socket.cancel()
     }
 
     public func subscribe(channelName: String) throws {
         let subscribeObject = EmitEvent(event: "#subscribe", data: AuthChannel(channel: channelName), cid: counter.incrementAndGet())
 
-        do {
-            try self.send(subscribeObject)
-        } catch {
-            print("🚨 Websocket subscribe error: \(error.localizedDescription)")
-            throw error
+        Task {
+            do {
+                try await self.send(subscribeObject)
+            } catch {
+                print("🚨 Websocket subscribe error: \(error.localizedDescription)")
+                throw error
+            }
         }
     }
 
     public func unsubscribe(channelName: String) throws {
         let unsubscribeObject = EmitEvent(event: "#unsubscribe", data: channelName, cid: counter.incrementAndGet())
 
-        do {
-            try self.send(unsubscribeObject)
-        } catch {
-            print("🚨 Websocket unsubscribe error: \(error.localizedDescription)")
-            throw error
+        Task {
+            do {
+                try await self.send(unsubscribeObject)
+            } catch {
+                print("🚨 Websocket unsubscribe error: \(error.localizedDescription)")
+                throw error
+            }
         }
     }
 
@@ -102,50 +112,78 @@ public class SkSocketClient {
         self.onListener[eventName] = onListener
     }
 
-    public func send<T: Encodable>(_ message: T) throws {
-        guard let socket
-        else { throw SKSocketConnectionError.connectionError }
+}
 
+// MARK: - WebSocket Receive
+extension SkSocketClient {
+
+    // FIXME: socket-cluster subscribe -> send
+    func send<T: Encodable>(_ message: T) async throws {
         guard let messageData = message.toJSONString()
         else { throw SKSocketConnectionError.encodingError }
 
-        socket.send(.string(messageData)) { error in
-            if let error = error {
-                print("🚨 Websocket send error: \(error.localizedDescription)")
-            }
-        }
-
-        /*
         do {
             try await socket.send(.string(messageData))
         } catch {
             switch socket.closeCode {
-            case .invalid:
-                throw SKSocketConnectionError.connectionError
-            case .goingAway:
-                throw SKSocketConnectionError.disconnected
-            case .normalClosure:
-                throw SKSocketConnectionError.closed
-            default:
-                throw SKSocketConnectionError.transportError
-            }
-        }
-         */
-    }
-
-    public func receiveMessage() {
-        guard let socket
-        else { return }
-
-        socket.receive { result in
-            switch result {
-            case .success(let success):
-                print(success)
-            case .failure(let failure):
-                print(failure.localizedDescription)
+                case .invalid:
+                    throw SKSocketConnectionError.connectionError
+                case .goingAway:
+                    throw SKSocketConnectionError.disconnected
+                case .normalClosure:
+                    throw SKSocketConnectionError.closed
+                default:
+                    throw SKSocketConnectionError.transportError
             }
         }
     }
+
+    // FIXME: socket-cluster on channel -> receive
+    func receive() -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream { [weak self] in
+            guard let self
+            else { return nil }
+
+            let message = try await self.receiveOnce()
+
+            return Task.isCancelled ? nil : message
+        }
+    }
+
+    func receiveOnce() async throws -> Data {
+        do {
+            return try await receiveSingleMessage()
+        } catch let error as SKSocketConnectionError {
+            throw error
+        } catch {
+            switch socket.closeCode {
+                case .invalid:
+                    throw SKSocketConnectionError.connectionError
+                case .goingAway:
+                    throw SKSocketConnectionError.disconnected
+                case .normalClosure:
+                    throw SKSocketConnectionError.closed
+                default:
+                    throw SKSocketConnectionError.transportError
+            }
+        }
+    }
+
+    private func receiveSingleMessage() async throws -> Data {
+        switch try await socket.receive() {
+            case let .data(messageData):
+                return messageData
+            case let .string(text):
+                guard let messageData = text.data(using: .utf8)
+                else { throw SKSocketConnectionError.decodingError }
+
+                return messageData
+            @unknown default:
+                self.socket.cancel(with: .unsupportedData, reason: nil)
+                throw SKSocketConnectionError.decodingError
+        }
+    }
+    
 
 }
 
