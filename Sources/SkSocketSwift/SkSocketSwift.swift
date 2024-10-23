@@ -133,6 +133,20 @@ public class SkSocketClient {
          */
     }
 
+    public func receiveMessage() {
+        guard let socket
+        else { return }
+
+        socket.receive { result in
+            switch result {
+            case .success(let success):
+                print(success)
+            case .failure(let failure):
+                print(failure.localizedDescription)
+            }
+        }
+    }
+
 }
 
 // MARK: - Integer
