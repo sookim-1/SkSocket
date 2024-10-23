@@ -33,17 +33,16 @@ public class SkSocketClient: NSObject {
 
 
     // MARK: - Origin
-    public typealias OnConnectHandler = (SkSocketClient) -> Void
-    public typealias OnConnectErrorHandler = ((SkSocketClient, Error?)-> Void)
+    public typealias OnConnectHandler = () -> Void
+    public typealias OnDisconnectHandler = () -> Void
 
     var url : String?
     var onConnect: OnConnectHandler?
-    var onConnectError: OnConnectErrorHandler?
-    var onDisconnect: OnConnectErrorHandler?
+    var onDisconnect: OnDisconnectHandler?
     var counter: AtomicInteger = AtomicInteger()
 
     // MARK: - WebSocket
-    var socket: URLSessionWebSocketTask
+    public var socket: URLSessionWebSocketTask
 
     public init(url: String) {
         if let url = URL(string: url) {
@@ -54,16 +53,17 @@ public class SkSocketClient: NSObject {
         }
 
         super.init()
+
+        self.socket.delegate = self
     }
 
     deinit {
         self.socket.cancel(with: .goingAway, reason: nil)
     }
 
-    public func setBasicListener(onConnect: OnConnectHandler?, onConnectError: OnConnectErrorHandler?, onDisconnect: OnConnectErrorHandler?) {
+    public func setBasicListener(onConnect: OnConnectHandler?, onDisconnect: OnDisconnectHandler?) {
         self.onConnect = onConnect
         self.onDisconnect = onDisconnect
-        self.onConnectError = onConnectError
     }
 
     public func connect() {
@@ -184,6 +184,19 @@ extension SkSocketClient {
         }
     }
     
+
+}
+
+// MARK: - URLSessionWebSocketDelegate
+extension SkSocketClient: URLSessionWebSocketDelegate {
+
+    public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        self.onConnect?()
+    }
+
+    public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        self.onDisconnect?()
+    }
 
 }
 
