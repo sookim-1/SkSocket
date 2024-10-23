@@ -72,23 +72,25 @@ public class SkSocketClient {
         socket?.cancel()
     }
 
-    public func subscribe(channelName: String) async {
+    public func subscribe(channelName: String) throws {
         let subscribeObject = EmitEvent(event: "#subscribe", data: AuthChannel(channel: channelName), cid: counter.incrementAndGet())
 
         do {
-            try await self.send(subscribeObject)
+            try self.send(subscribeObject)
         } catch {
-            print("\(error.localizedDescription)")
+            print("🚨 Websocket subscribe error: \(error.localizedDescription)")
+            throw error
         }
     }
 
-    public func unsubscribe(channelName: String) async {
+    public func unsubscribe(channelName: String) throws {
         let unsubscribeObject = EmitEvent(event: "#unsubscribe", data: channelName, cid: counter.incrementAndGet())
 
         do {
-            try await self.send(unsubscribeObject)
+            try self.send(unsubscribeObject)
         } catch {
-            print("\(error.localizedDescription)")
+            print("🚨 Websocket unsubscribe error: \(error.localizedDescription)")
+            throw error
         }
     }
 
@@ -100,13 +102,20 @@ public class SkSocketClient {
         self.onListener[eventName] = onListener
     }
 
-    public func send<T: Encodable>(_ message: T) async throws {
+    public func send<T: Encodable>(_ message: T) throws {
         guard let socket
         else { throw SKSocketConnectionError.connectionError }
 
         guard let messageData = message.toJSONString()
         else { throw SKSocketConnectionError.encodingError }
 
+        socket.send(.string(messageData)) { error in
+            if let error = error {
+                print("🚨 Websocket send error: \(error.localizedDescription)")
+            }
+        }
+
+        /*
         do {
             try await socket.send(.string(messageData))
         } catch {
@@ -121,6 +130,7 @@ public class SkSocketClient {
                 throw SKSocketConnectionError.transportError
             }
         }
+         */
     }
 
 }
