@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "SkSocketSwift",
-    platforms: [.iOS(.v13), .macOS(.v12)],
+    platforms: [.iOS(.v15), .macOS(.v12)],
     products: [
         .library(
             name: "SkSocketSwift",
