@@ -43,13 +43,15 @@ public class SkSocketClient {
     var counter: AtomicInteger = AtomicInteger()
 
     // MARK: - WebSocket
-    //  = URLSession.shared.webSocketTask(with: URL(string: )!)
     var socket: URLSessionWebSocketTask?
 
     public convenience init(url: String) {
         self.init()
 
-        self.socket = URLSession.shared.webSocketTask(with: URL(string: url)!)
+        if let url = URL(string: url) {
+            let request = URLRequest(url: url)
+            self.socket = URLSession.shared.webSocketTask(with: request)
+        }
     }
 
     public func setBasicListener(onConnect: OnConnectHandler?, onConnectError: OnConnectErrorHandler?, onDisconnect: OnConnectErrorHandler?) {
@@ -74,7 +76,7 @@ public class SkSocketClient {
         let subscribeObject = EmitEvent(event: "#subscribe", data: AuthChannel(channel: channelName), cid: counter.incrementAndGet())
 
         do {
-            try await self.socket?.send(.string(subscribeObject.toJSONString()!))
+            try await self.send(subscribeObject)
         } catch {
             print("\(error.localizedDescription)")
         }
@@ -84,18 +86,41 @@ public class SkSocketClient {
         let unsubscribeObject = EmitEvent(event: "#unsubscribe", data: channelName, cid: counter.incrementAndGet())
 
         do {
-            try await self.socket?.send(.string(unsubscribeObject.toJSONString()!))
+            try await self.send(unsubscribeObject)
         } catch {
             print("\(error.localizedDescription)")
         }
     }
 
-    public func onChannel(channelName : String, ack : @escaping (String, AnyObject?) -> Void) {
-        putOnListener(eventName: channelName, onListener: ack)
+    public func onChannel(channelName: String, ack: @escaping (String, AnyObject?) -> Void) {
+        self.putOnListener(eventName: channelName, onListener: ack)
     }
 
-    func putOnListener(eventName : String, onListener: @escaping (String, AnyObject?) -> Void) {
+    func putOnListener(eventName:  String, onListener: @escaping (String, AnyObject?) -> Void) {
         self.onListener[eventName] = onListener
+    }
+
+    public func send<T: Encodable>(_ message: T) async throws {
+        guard let socket
+        else { throw SKSocketConnectionError.connectionError }
+
+        guard let messageData = message.toJSONString()
+        else { throw SKSocketConnectionError.encodingError }
+
+        do {
+            try await socket.send(.string(messageData))
+        } catch {
+            switch socket.closeCode {
+            case .invalid:
+                throw SKSocketConnectionError.connectionError
+            case .goingAway:
+                throw SKSocketConnectionError.disconnected
+            case .normalClosure:
+                throw SKSocketConnectionError.closed
+            default:
+                throw SKSocketConnectionError.transportError
+            }
+        }
     }
 
 }
