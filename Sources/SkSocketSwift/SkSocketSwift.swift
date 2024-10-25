@@ -118,7 +118,7 @@ public class SkSocketClient: NSObject {
 extension SkSocketClient {
 
     // FIXME: socket-cluster subscribe -> send
-    func send<T: Encodable>(_ message: T) async throws {
+    private func send<T: Encodable>(_ message: T) async throws {
         guard let messageData = message.toJSONString()
         else { throw SKSocketConnectionError.encodingError }
 
@@ -139,7 +139,7 @@ extension SkSocketClient {
     }
 
     // FIXME: socket-cluster on channel -> receive
-    func receive() -> AsyncThrowingStream<Data, Error> {
+    public func receiveSocket() -> AsyncThrowingStream<Data, Error> {
         AsyncThrowingStream { [weak self] in
             guard let self
             else { return nil }
@@ -150,7 +150,7 @@ extension SkSocketClient {
         }
     }
 
-    func receiveOnce() async throws -> Data {
+    private func receiveOnce() async throws -> Data {
         do {
             return try await receiveSingleMessage()
         } catch let error as SKSocketConnectionError {
