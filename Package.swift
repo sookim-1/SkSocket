@@ -4,19 +4,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "SkSocketSwift",
+    name: "ScClientNative",
     platforms: [.iOS(.v15), .macOS(.v12)],
     products: [
         .library(
-            name: "SkSocketSwift",
-            targets: ["SkSocketSwift"]),
+            name: "ScClientNative",
+            targets: ["ScClientNative"]),
     ],
     targets: [
         .target(
-            name: "SkSocketSwift"),
+            name: "ScClientNative"),
         .testTarget(
-            name: "SkSocketSwiftTests",
-            dependencies: ["SkSocketSwift"]
+            name: "ScClientNativeTests",
+            dependencies: ["ScClientNative"]
         ),
     ]
 )
