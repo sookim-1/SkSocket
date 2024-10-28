@@ -37,6 +37,7 @@ public class ScClient: Listener {
 
     public func reconnect() {
         self.socket = URLSession.shared.webSocketTask(with: self.url, protocols: protocols)
+        self.socket.delegate = self
         self.socket.resume()
     }
 
@@ -158,47 +159,70 @@ extension ScClient {
         self.socket.send(.string(""), completionHandler: completionHandler)
     }
 
+    public func startWebsocketDidReceive() {
+        guard isConnected() else { return }
+
+        self.socket.receive { [weak self] result in
+            guard let self = self else { return }
+
+            switch result {
+            case .success(let success):
+                switch success {
+                case .data(let data):
+                    self.websocketDidReceiveData(data: data)
+                case .string(let string):
+                    guard let messageData = string.data(using: .utf8) else { return }
+
+                    let str = String(decoding: messageData, as: UTF8.self)
+                    print("💬 Received message: \(str)")
+
+                    self.websocketDidReceiveMessage(text: string)
+                default:
+                    print("DidReceive Error")
+                }
+            case .failure(let failure):
+                print("DidReceive Error: \(failure)")
+            }
+
+            self.startWebsocketDidReceive()
+        }
+    }
+
     public func websocketDidReceiveMessage(text: String) {
-        while isConnected() {
-            self.socket.receive { [weak self] result in
-                guard let self else { return }
-                
-                switch result {
-                case .success(let success):
-                    if let messageObject = JSONConverter.deserializeString(message: text),
-                       let (data, rid, cid, eventName, error) = Parser.getMessageDetails(myMessage: messageObject) {
-                        
-                        let parseResult = Parser.parse(rid: rid, cid: cid, event: eventName)
-                        
-                        switch parseResult {
-                        case .isAuthenticated:
-                            let isAuthenticated = ClientUtils.getIsAuthenticated(message: messageObject)
-                            onAuthentication?(self, isAuthenticated)
-                        case .publish:
-                            if let channel = Model.getChannelObject(data: JSONConverter.jsonString(from: data)) {
-                                handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
-                            }
-                        case .removeToken:
-                            self.authToken = nil
-                        case .setToken:
-                            authToken = ClientUtils.getAuthToken(message: messageObject)
-                            self.onSetAuthentication?(self, authToken)
-                        case .ackReceive:
-                            handleEmitAck(id: rid!, error: error as AnyObject, data: data as AnyObject)
-                        case .event:
-                            if hasEventAck(eventName: eventName!) {
-                                handleOnAckListener(eventName: eventName!, data: data as AnyObject, ack: self.ack(cid: cid!, completionHandler: { _ in }))
-                            } else {
-                                handleOnListener(eventName: eventName!, data: data as AnyObject)
-                            }
-                        }
-                    }
-                case .failure(let failure):
-                    print("DidReceive Error: \(failure)")
+        if let messageObject = JSONConverter.deserializeString(message: text),
+           let (data, rid, cid, eventName, error) = Parser.getMessageDetails(myMessage: messageObject) {
+
+            let parseResult = Parser.parse(rid: rid, cid: cid, event: eventName)
+
+            switch parseResult {
+            case .isAuthenticated:
+                let isAuthenticated = ClientUtils.getIsAuthenticated(message: messageObject)
+                onAuthentication?(self, isAuthenticated)
+            case .publish:
+                if let channel = Model.getChannelObject(data: JSONConverter.jsonString(from: data)) {
+                    handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
+                }
+            case .removeToken:
+                self.authToken = nil
+            case .setToken:
+                authToken = ClientUtils.getAuthToken(message: messageObject)
+                self.onSetAuthentication?(self, authToken)
+            case .ackReceive:
+                handleEmitAck(id: rid!, error: error as AnyObject, data: data as AnyObject)
+            case .event:
+                if hasEventAck(eventName: eventName!) {
+                    handleOnAckListener(eventName: eventName!, data: data as AnyObject, ack: self.ack(cid: cid!, completionHandler: { _ in }))
+                } else {
+                    handleOnListener(eventName: eventName!, data: data as AnyObject)
                 }
             }
         }
     }
+
+    public func websocketDidReceiveData(data: Data) {
+        print("Received data: \(data.count)")
+    }
+
 
 }
 
@@ -211,12 +235,20 @@ extension ScClient: URLSessionWebSocketDelegate {
         self.sendHandShake { [weak self] error in
             guard let self else { return }
 
-            self.onConnect?(self)
+            DispatchQueue.global().async {
+                self.startWebsocketDidReceive()
+            }
+
+            DispatchQueue.main.async {
+                self.onConnect?(self)
+            }
         }
     }
 
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        onDisconnect?(self, WebSocketError.findMatchError(closeCode: closeCode.rawValue))
+        DispatchQueue.main.async {
+            self.onDisconnect?(self, WebSocketError.findMatchError(closeCode: closeCode.rawValue))
+        }
     }
 
 }
