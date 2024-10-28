@@ -7,7 +7,6 @@
 
 import Foundation
 
-/*
 // MARK: - Class DispatchSemaphore 로 스레드 안전성 처리
 public final class AtomicInteger {
 
@@ -35,7 +34,6 @@ public final class AtomicInteger {
         lock.wait()
         defer { lock.signal() }
         _value -= 1
-
         return _value
     }
 
@@ -43,12 +41,12 @@ public final class AtomicInteger {
         lock.wait()
         defer { lock.signal() }
         _value += 1
-
         return _value
     }
 
 }
-*/
+
+ /*
 
 // MARK: - actor 로 스레드 안전성 처리
 actor AtomicInteger {
@@ -76,4 +74,4 @@ actor AtomicInteger {
         value = newValue
     }
 }
-
+*/
