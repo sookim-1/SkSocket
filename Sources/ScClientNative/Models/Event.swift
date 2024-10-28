@@ -28,7 +28,7 @@ class ReceiveEvent<T: Encodable>: Encodable {
     var error: T?
     var rid: Int
 
-    init (data : T?, error : T?, rid : Int) {
+    init (data: T?, error: T?, rid: Int) {
         self.data = data
         self.error = error
         self.rid = rid
@@ -41,7 +41,7 @@ class Channel<T: Encodable>: Encodable {
     var channel: String
     var data: T?
 
-    init (channel : String, data : T?) {
+    init (channel: String, data: T?) {
         self.channel = channel
         self.data = data
     }
@@ -53,12 +53,12 @@ class AuthChannel: Encodable {
     var channel: String
     var data: ChannelData?
 
-    init(channel : String, data: ChannelData?) {
+    init(channel: String, data: ChannelData?) {
         self.channel = channel
         self.data = data
     }
 
-    init(channel : String, token: String?) {
+    init(channel: String, token: String?) {
         self.channel = channel
         self.data = ChannelData(jwt: token)
     }
@@ -108,9 +108,21 @@ class Model  {
         return ReceiveEvent(data: data, error: error, rid: messageId)
     }
 
-    public static func getChannelObject<T: Encodable>(data: T?) -> Channel<T>? {
+    public static func getChannelObject<T: Encodable>(data: T?) -> Channel<String>? {
+        /* FIXME: [String: Any], AnyObject 처리
         if let channel = data as? [String: Any] {
             return Channel(channel: channel["channel"] as! String, data: channel["data"] as? T)
+        }
+
+         return nil
+         */
+
+        if let stringData = data as? String,
+           let convertData = stringData.data(using: .utf8),
+           let dictionaryData = try? JSONSerialization.jsonObject(with: convertData, options: []) as? [String: Any],
+           let channel = dictionaryData["channel"] as? String,
+           let dataString = dictionaryData["data"] as? String {
+            return Channel(channel: channel, data: dataString)
         }
 
         return nil

@@ -199,9 +199,20 @@ extension ScClient {
                 let isAuthenticated = ClientUtils.getIsAuthenticated(message: messageObject)
                 onAuthentication?(self, isAuthenticated)
             case .publish:
+                guard let dictionary = data as? [String: Any],
+                      let jsonData = try? JSONSerialization.data(withJSONObject: dictionary, options: []),
+                      let jsonString =  String(data: jsonData, encoding: .utf8)
+                else { return }
+
+                if let channel = Model.getChannelObject(data: jsonString) {
+                    handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
+                }
+
+                /* FIXME: [String: Any], AnyObject 처리
                 if let channel = Model.getChannelObject(data: JSONConverter.jsonString(from: data)) {
                     handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
                 }
+                */
             case .removeToken:
                 self.authToken = nil
             case .setToken:
@@ -222,7 +233,6 @@ extension ScClient {
     public func websocketDidReceiveData(data: Data) {
         print("Received data: \(data.count)")
     }
-
 
 }
 
