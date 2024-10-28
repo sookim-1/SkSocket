@@ -159,16 +159,17 @@ extension ScClient {
     }
 
     public func websocketDidReceiveMessage(text: String) {
-        self.socket.receive { [weak self] result in
-            guard let self else { return }
-
-            switch result {
-            case .success(let success):
-                if let messageObject = JSONConverter.deserializeString(message: text),
-                    let (data, rid, cid, eventName, error) = Parser.getMessageDetails(myMessage: messageObject) {
-
+        while isConnected() {
+            self.socket.receive { [weak self] result in
+                guard let self else { return }
+                
+                switch result {
+                case .success(let success):
+                    if let messageObject = JSONConverter.deserializeString(message: text),
+                       let (data, rid, cid, eventName, error) = Parser.getMessageDetails(myMessage: messageObject) {
+                        
                         let parseResult = Parser.parse(rid: rid, cid: cid, event: eventName)
-
+                        
                         switch parseResult {
                         case .isAuthenticated:
                             let isAuthenticated = ClientUtils.getIsAuthenticated(message: messageObject)
@@ -192,8 +193,9 @@ extension ScClient {
                             }
                         }
                     }
-            case .failure(let failure):
-                print("DidReceive Error: \(failure)")
+                case .failure(let failure):
+                    print("DidReceive Error: \(failure)")
+                }
             }
         }
     }
