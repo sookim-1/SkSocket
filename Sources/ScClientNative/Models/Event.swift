@@ -53,11 +53,6 @@ class AuthChannel: Encodable {
     var channel: String
     var data: ChannelData?
 
-    init(channel: String, data: ChannelData?) {
-        self.channel = channel
-        self.data = data
-    }
-
     init(channel: String, token: String?) {
         self.channel = channel
         self.data = ChannelData(jwt: token)
@@ -66,11 +61,13 @@ class AuthChannel: Encodable {
 }
 
 class ChannelData: Encodable {
+
     var jwt: String?
 
     init(jwt: String?) {
         self.jwt = jwt
     }
+
 }
 
 class AuthData: Encodable {
@@ -128,8 +125,8 @@ class Model  {
         return nil
     }
 
-    public static func getSubscribeEventObject(channelName: String, messageId: Int) -> EmitEvent<Channel<String>> {
-        return EmitEvent(event: "#subscribe", data: Channel(channel: channelName, data: nil), cid: messageId)
+    public static func getSubscribeEventObject<T: Encodable>(channelName: String, messageId: Int, data: T? = nil) -> EmitEvent<Channel<T>> {
+        return EmitEvent(event: "#subscribe", data: Channel(channel: channelName, data: data), cid: messageId)
     }
 
     public static func getSubscribeEventObject(channelName: String, messageId: Int, token: String? = nil) -> EmitEvent<AuthChannel> {
@@ -141,7 +138,7 @@ class Model  {
     }
 
     public static func getPublishEventObject<T: Encodable>(channelName: String, data: T?, messageId: Int) -> EmitEvent<Channel<T>> {
-        return EmitEvent(event: "#publish", data: Channel(channel: channelName, data :data), cid: messageId)
+        return EmitEvent(event: "#publish", data: Channel(channel: channelName, data: data), cid: messageId)
     }
 
     public static func getHandshakeObject(authToken: String?, messageId: Int) -> HandShake {
