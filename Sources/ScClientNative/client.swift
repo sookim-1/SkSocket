@@ -79,7 +79,7 @@ extension ScClient {
         self.socket.send(.string(handshake.toJSONString()!), completionHandler: completionHandler)
     }
 
-    private func ack(cid: Int, completionHandler: @escaping (Error?) -> Void) -> (AnyObject?, AnyObject?) -> Void {
+    private func ack(cid: Int, completionHandler: @escaping (Error?) -> Void) -> AckHandler {
         return  {
             (error: AnyObject?, data: AnyObject?) in
             let ackObject = Model.getReceiveEventObject(data: JSONConverter.jsonString(from: data), error: JSONConverter.jsonString(from: error), messageId: cid)
@@ -92,7 +92,7 @@ extension ScClient {
         self.socket.send(.string(emitObject.toJSONString()!), completionHandler: completionHandler)
     }
 
-    public func emitAck<T: Encodable>(eventName: String, data: T?, ack: @escaping AckHandler, completionHandler: @escaping (Error?) -> Void) {
+    public func emitAck<T: Encodable>(eventName: String, data: T?, ack: @escaping AckEventNameHandler, completionHandler: @escaping (Error?) -> Void) {
         let id = counter.incrementAndGet()
         let emitObject = Model.getEmitEventObject(eventName: eventName, data: data, messageId: id)
         putEmitAck(id: id, eventName: eventName, ack: ack)
@@ -104,7 +104,7 @@ extension ScClient {
         self.socket.send(.string(subscribeObject.toJSONString()!), completionHandler: completionHandler)
     }
 
-    public func subscribeAck(channelName: String, token: String? = nil, ack: @escaping AckHandler, completionHandler: @escaping (Error?) -> Void) {
+    public func subscribeAck(channelName: String, token: String? = nil, ack: @escaping AckEventNameHandler, completionHandler: @escaping (Error?) -> Void) {
         let id = counter.incrementAndGet()
         let subscribeObject = Model.getSubscribeEventObject(channelName: channelName, messageId: id, token: token)
         putEmitAck(id: id, eventName: channelName, ack: ack)
@@ -116,7 +116,7 @@ extension ScClient {
         self.socket.send(.string(unsubscribeObject.toJSONString()!), completionHandler: completionHandler)
     }
 
-    public func unsubscribeAck(channelName: String, ack: @escaping AckHandler, completionHandler: @escaping (Error?) -> Void) {
+    public func unsubscribeAck(channelName: String, ack: @escaping AckEventNameHandler, completionHandler: @escaping (Error?) -> Void) {
         let id = counter.incrementAndGet()
         let unsubscribeObject = Model.getUnsubscribeEventObject(channelName: channelName, messageId: id)
         putEmitAck(id: id, eventName: channelName, ack: ack)
@@ -128,7 +128,7 @@ extension ScClient {
         self.socket.send(.string(publishObject.toJSONString()!), completionHandler: completionHandler)
     }
 
-    public func publishAck<T: Encodable>(channelName: String, data: T?, ack: @escaping AckHandler, completionHandler: @escaping (Error?) -> Void) {
+    public func publishAck<T: Encodable>(channelName: String, data: T?, ack: @escaping AckEventNameHandler, completionHandler: @escaping (Error?) -> Void) {
         let id = counter.incrementAndGet()
         let publishObject = Model.getPublishEventObject(channelName: channelName, data: data, messageId: id)
         putEmitAck(id: id, eventName: channelName, ack: ack)
@@ -143,7 +143,7 @@ extension ScClient {
         putOnListener(eventName: eventName, onListener: ack)
     }
 
-    public func onAck(eventName: String, ack: @escaping (String, AnyObject?, (AnyObject?, AnyObject?) -> Void) -> Void) {
+    public func onAck(eventName: String, ack: @escaping (String, AnyObject?, AckHandler) -> Void) {
         putOnAckListener(eventName: eventName, onAckListener: ack)
     }
 

@@ -7,7 +7,11 @@
 
 import Foundation
 
-public typealias AckHandler = (String, AnyObject?, AnyObject?) -> Void
+// eventName, error, data
+public typealias AckEventNameHandler = (String, AnyObject?, AnyObject?) -> Void
+
+// error, data
+public typealias AckHandler = (AnyObject?, AnyObject?) -> Void
 
 public enum WebSocketError: Error {
 

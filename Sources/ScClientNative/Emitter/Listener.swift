@@ -9,17 +9,17 @@ import Foundation
 
 public class Listener: NSObject {
 
-    var emitAckListener: [Int: (String, AckHandler)]
+    var emitAckListener: [Int: (String, AckEventNameHandler)]
     var onListener: [String: (String, AnyObject?) -> Void]
-    var onAckListener: [String: (String, AnyObject?, (AnyObject?, AnyObject?) -> Void) -> Void]
+    var onAckListener: [String: (String, AnyObject?, AckHandler) -> Void]
 
     public override init() {
-        emitAckListener = [Int : (String, AckHandler)]()
+        emitAckListener = [Int : (String, AckEventNameHandler)]()
         onListener = [String : (String, AnyObject?) -> Void]()
-        onAckListener = [String: (String, AnyObject?, (AnyObject?, AnyObject?) -> Void) -> Void]()
+        onAckListener = [String: (String, AnyObject?, AckHandler) -> Void]()
     }
 
-    func putEmitAck(id: Int, eventName: String, ack: @escaping AckHandler) {
+    func putEmitAck(id: Int, eventName: String, ack: @escaping AckEventNameHandler) {
         self.emitAckListener[id] = (eventName, ack)
     }
 
@@ -41,11 +41,11 @@ public class Listener: NSObject {
         }
     }
 
-    func putOnAckListener(eventName: String, onAckListener: @escaping (String, AnyObject?, (AnyObject?, AnyObject?) -> Void ) -> Void) {
+    func putOnAckListener(eventName: String, onAckListener: @escaping (String, AnyObject?, AckHandler) -> Void) {
         self.onAckListener[eventName] = onAckListener
     }
 
-    func handleOnAckListener(eventName: String, data: AnyObject?, ack: (AnyObject?, AnyObject?) -> Void) {
+    func handleOnAckListener(eventName: String, data: AnyObject?, ack: AckHandler) {
         if let onAck = onAckListener[eventName] {
             onAck(eventName, data, ack)
         }
