@@ -171,11 +171,6 @@ extension ScClient {
                 case .data(let data):
                     self.websocketDidReceiveData(data: data)
                 case .string(let string):
-                    guard let messageData = string.data(using: .utf8) else { return }
-
-                    let str = String(decoding: messageData, as: UTF8.self)
-                    print("💬 Received message: \(str)")
-
                     self.websocketDidReceiveMessage(text: string)
                 default:
                     print("DidReceive Error")
@@ -200,19 +195,14 @@ extension ScClient {
                 onAuthentication?(self, isAuthenticated)
             case .publish:
                 guard let dictionary = data as? [String: Any],
-                      let jsonData = try? JSONSerialization.data(withJSONObject: dictionary, options: []),
-                      let jsonString =  String(data: jsonData, encoding: .utf8)
+                      let channelName = dictionary["channel"] as? String,
+                      let channelData = dictionary["data"] as? AnyObject,
+                      let channelJson = try? JSONSerialization.data(withJSONObject: dictionary, options: []),
+                      let channelJsonString = String(data: channelJson, encoding: .utf8),
+                      let model = Model.getChannelObject(channelName: channelName, data: channelJsonString)
                 else { return }
 
-                if let channel = Model.getChannelObject(data: jsonString) {
-                    handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
-                }
-
-                /* FIXME: [String: Any], AnyObject 처리
-                if let channel = Model.getChannelObject(data: JSONConverter.jsonString(from: data)) {
-                    handleOnListener(eventName: channel.channel, data: channel.data as AnyObject)
-                }
-                */
+                self.handleOnListener(eventName: model.channel, data: model.data as AnyObject)
             case .removeToken:
                 self.authToken = nil
             case .setToken:

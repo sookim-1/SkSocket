@@ -105,24 +105,8 @@ class Model  {
         return ReceiveEvent(data: data, error: error, rid: messageId)
     }
 
-    public static func getChannelObject<T: Encodable>(data: T?) -> Channel<String>? {
-        /* FIXME: [String: Any], AnyObject 처리
-        if let channel = data as? [String: Any] {
-            return Channel(channel: channel["channel"] as! String, data: channel["data"] as? T)
-        }
-
-         return nil
-         */
-
-        if let stringData = data as? String,
-           let convertData = stringData.data(using: .utf8),
-           let dictionaryData = try? JSONSerialization.jsonObject(with: convertData, options: []) as? [String: Any],
-           let channel = dictionaryData["channel"] as? String,
-           let dataString = dictionaryData["data"] as? String {
-            return Channel(channel: channel, data: dataString)
-        }
-
-        return nil
+    public static func getChannelObject(channelName: String, data: String) -> Channel<String>? {
+        return Channel(channel: channelName, data: data)
     }
 
     public static func getSubscribeEventObject<T: Encodable>(channelName: String, messageId: Int, data: T? = nil) -> EmitEvent<Channel<T>> {
