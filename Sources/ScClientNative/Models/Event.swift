@@ -22,13 +22,13 @@ class EmitEvent<T: Encodable>: Encodable {
 
 }
 
-class ReceiveEvent<T: Encodable>: Encodable {
+class ReceiveEvent<T: Encodable, U: Encodable>: Encodable {
 
     var data: T?
-    var error: T?
+    var error: U?
     var rid: Int
 
-    init (data: T?, error: T?, rid: Int) {
+    init (data: T?, error: U?, rid: Int) {
         self.data = data
         self.error = error
         self.rid = rid
@@ -70,16 +70,6 @@ class ChannelData: Encodable {
 
 }
 
-class AuthData: Encodable {
-
-    var authToken: String?
-
-    init(authToken: String?) {
-        self.authToken = authToken
-    }
-
-}
-
 class HandShake: Encodable {
 
     var event: String
@@ -95,13 +85,23 @@ class HandShake: Encodable {
 
 }
 
+class AuthData: Encodable {
+
+    var authToken: String?
+
+    init(authToken: String?) {
+        self.authToken = authToken
+    }
+
+}
+
 class Model  {
 
     public static func getEmitEventObject<T: Encodable>(eventName: String, data: T?, messageId: Int) -> EmitEvent<T> {
         return EmitEvent(event: eventName, data: data, cid: messageId)
     }
 
-    public static func getReceiveEventObject<T: Encodable>(data: T?, error: T?, messageId: Int) -> ReceiveEvent<T> {
+    public static func getReceiveEventObject<T: Encodable, U: Encodable>(data: T?, error: U?, messageId: Int) -> ReceiveEvent<T, U> {
         return ReceiveEvent(data: data, error: error, rid: messageId)
     }
 
