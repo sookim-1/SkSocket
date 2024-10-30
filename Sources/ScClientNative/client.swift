@@ -196,7 +196,7 @@ extension ScClient {
             case .publish:
                 guard let dictionary = data as? [String: Any],
                       let channelName = dictionary["channel"] as? String,
-                      let channelData = dictionary["data"] as? AnyObject,
+                      let channelData = dictionary["data"] as? [String: Any],
                       let channelJson = try? JSONSerialization.data(withJSONObject: channelData, options: []),
                       let channelJsonString = String(data: channelJson, encoding: .utf8),
                       let model = Model.getChannelObject(channelName: channelName, data: channelJsonString)
