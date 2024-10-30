@@ -23,21 +23,21 @@ Installation and Use
 - To install add this to depedencies section of Package.swift
 
  ```swift
-     dependencies: [
-     	// other dependencies 
-    	.package(url: "https://github.com/sookim-1/socketcluster-client-swift-native.git", from: "1.0.10")
-	]
+dependencies: [
+	// other dependencies 
+	.package(url: "https://github.com/sookim-1/socketcluster-client-swift-native.git", from: "1.0.10")
+]
  ```
 - To use the library add this to target dependencies
 
  ```swift
-    targets: [
-        .target(
-            name: "your_target",
-            dependencies: [
-                "ScClientNative"
-            ])
-    ]
+targets: [
+	.target(
+	    name: "your_target",
+	    dependencies: [
+		"ScClientNative"
+	    ])
+]
  ```
 
 Description
@@ -45,16 +45,14 @@ Description
 Create instance of `scclient` by passing url of socketcluster-server end-point 
 
 ```swift
-    //Create a client instance
-    var client = ScClient(url: "ws://localhost:8000/socketcluster/")
-    
+//Create a client instance
+var client = ScClient(url: "ws://localhost:8000/socketcluster/")
 ```
 **Important Note** : Default url to socketcluster end-point is always *ws://somedomainname.com/socketcluster/*.
 
 #### Registering basic listeners
  
 - Different closure functions are given as an argument to register listeners
-- Example : main.swift
 
 ```swift
 import Foundation
@@ -93,11 +91,12 @@ func startCode(client scclient.Client) {
 - For connecting to server:
 
 ```swift 
-    //This will send websocket handshake request to socketcluster-server
-    client.connect()
+//This will send websocket handshake request to socketcluster-server
+client.connect()
 ```
 
 - For reconnecting to server:
+  
 If you are reconnecting, use the function below.
 Because URLWebSocketSessionTask needs to be re-created if it is reconnected.
 
@@ -109,8 +108,8 @@ client.reconnect()
 #### Getting connection status
 
 ```swift 
-    //This will send websocket handshake request to socketcluster-server
-    var status = client.isConnected()
+//This will send websocket handshake request to socketcluster-server
+var status = client.isConnected()
 ```
 
 Emitting and listening to events
@@ -120,36 +119,32 @@ Emitting and listening to events
 - eventname is name of event and message can be String, boolean, Int or Object
 
 ```swift
+client.emit(eventName: eventname, data: message as AnyObject)
 
-    client.emit(eventName: eventname, data: message as AnyObject)
-    
-  //client.emit(eventName: "chat", data: "This is my sample message" as AnyObject)
-  
+//client.emit(eventName: "chat", data: "This is my sample message" as AnyObject)
 ```
 
 - To send event with acknowledgement
 
 ```swift
-
-    client.emitAck(eventName: "chat", data: "This is my sample message" as AnyObject, ack : {
-    	    (eventName : String, error : AnyObject? , data : AnyObject?) in
-            print("Got data for eventName ", eventName, " error is ", error, " data is ", data)  
-    })
-	
+client.emitAck(eventName: "chat", data: "This is my sample message" as AnyObject, ack : {
+    (eventName : String, error : AnyObject? , data : AnyObject?) in
+    print("Got data for eventName ", eventName, " error is ", error, " data is ", data)  
+})
 ```
 
 ### Event Ping
 - To send ping
 
 ```swift
-    client.sendPing()
+client.sendPing()
 ```
 
 - To send EmptyEvent
 
 ```swift
-    client.sendEmptyDataEvent()
-    client.sendEmptyStringEvent()
+client.sendEmptyDataEvent()
+client.sendEmptyStringEvent()
 ```
 
 #### Event Listener
@@ -159,24 +154,22 @@ Emitting and listening to events
 The object received can be String, Boolean, Int or Object
 
 ```swift
-    // Receiver code without sending acknowledgement back
-    client.on(eventName: "yell", ack: {
-    	    (eventName : String, data : AnyObject?) in
-            print("Got data for eventName ", eventName, " data is ", data)
-    })
-    
+// Receiver code without sending acknowledgement back
+client.on(eventName: "yell", ack: {
+    (eventName : String, data : AnyObject?) in
+    print("Got data for eventName ", eventName, " data is ", data)
+})
 ```
 
 - To send acknowledgement back to server
 
 ```swift
-    // Receiver code with ack
-    client.onAck(eventName: "yell", ack: {
-            (eventName : String, data : AnyObject?, ack : (AnyObject?, AnyObject?) -> Void) in
-            print("Got data for eventName ", eventName, " data is ", data)
-            ack("This is error " as AnyObject, "This is data " as AnyObject)
-    })
-        
+// Receiver code with ack
+client.onAck(eventName: "yell", ack: {
+    (eventName : String, data : AnyObject?, ack : (AnyObject?, AnyObject?) -> Void) in
+    print("Got data for eventName ", eventName, " data is ", data)
+    ack("This is error " as AnyObject, "This is data " as AnyObject)
+})
 ```
 
 Implementing Pub-Sub via channels
@@ -187,18 +180,18 @@ Implementing Pub-Sub via channels
 - For creating and subscribing to channels:
 
 ```swift 
-    // without acknowledgement
-    client.subscribe(channelName: "yell")
-    
-    //with acknowledgement
-    client.subscribeAck(channelName: "yell", ack : {
-        (channelName : String, error : AnyObject?, data : AnyObject?) in
-        if (error is NSNull) {
-            print("Successfully subscribed to channel ", channelName)
-        } else {
-            print("Got error while subscribing ", error)
-        }
-    })
+// without acknowledgement
+client.subscribe(channelName: "yell")
+
+//with acknowledgement
+client.subscribeAck(channelName: "yell", ack : {
+(channelName : String, error : AnyObject?, data : AnyObject?) in
+if (error is NSNull) {
+    print("Successfully subscribed to channel ", channelName)
+} else {
+    print("Got error while subscribing ", error)
+}
+})
 ```
 
 
@@ -207,20 +200,19 @@ Implementing Pub-Sub via channels
 - For publishing event :
 
 ```swift
+// without acknowledgement
+client.publish(channelName: "yell", data: "I am sending data to yell" as AnyObject)
 
-	// without acknowledgement
-	client.publish(channelName: "yell", data: "I am sending data to yell" as AnyObject)
 
-
-	// with acknowledgement
-	client.publishAck(channelName: "yell", data: "I am sending data to yell" as AnyObject, ack : {
-		(channelName : String, error : AnyObject?, data : AnyObject?) in
-		if (error is NSNull) {
-		     print("Successfully published to channel ", channelName)
-		}else {
-		     print("Got error while publishing ", error)
-		}
-	})
+// with acknowledgement
+client.publishAck(channelName: "yell", data: "I am sending data to yell" as AnyObject, ack : {
+	(channelName : String, error : AnyObject?, data : AnyObject?) in
+	if (error is NSNull) {
+	     print("Successfully published to channel ", channelName)
+	}else {
+	     print("Got error while publishing ", error)
+	}
+})
 ``` 
  
 #### Listening to channel
@@ -228,27 +220,27 @@ Implementing Pub-Sub via channels
 - For listening to channel event :
 
 ```swift
-        client.onChannel(channelName: "yell", ack: {
-    		(channelName : String , data : AnyObject?) in
-    		print ("Got data for channel", channelName, " object data is ", data)
-	})
+client.onChannel(channelName: "yell", ack: {
+	(channelName : String , data : AnyObject?) in
+	print ("Got data for channel", channelName, " object data is ", data)
+})
 ``` 
      
 #### Un-subscribing to channel
 
 ```swift
-    // without acknowledgement
-    client.unsubscribe(channelName: "yell")
-    
-    //with acknowledgement
-    client.unsubscribeAck(channelName: "yell", ack : {
-        (channelName : String, error : AnyObject?, data : AnyObject?) in
-        if (error is NSNull) {
-            print("Successfully unsubscribed to channel ", channelName)
-        } else {
-            print("Got error while unsubscribing ", error)
-        }
-    })
+// without acknowledgement
+client.unsubscribe(channelName: "yell")
+
+//with acknowledgement
+client.unsubscribeAck(channelName: "yell", ack : {
+(channelName : String, error : AnyObject?, data : AnyObject?) in
+if (error is NSNull) {
+    print("Successfully unsubscribed to channel ", channelName)
+} else {
+    print("Got error while unsubscribing ", error)
+}
+})
 ```
 
 
@@ -258,7 +250,7 @@ Implementing Pub-Sub via channels
 If you need to specify a protocol, simple add it to the init:
 
 ```swift
-	//chat and superchat are the example protocols here
-	var request = URLRequest(url: URL(string: "http://localhost:8000/socketcluster/")!)
-	var client = ScClient(URLRequest: request, protocols: ["chat","superchat"])
+//chat and superchat are the example protocols here
+var url = URL(string: "ws://localhost:8000/socketcluster/")!
+var client = ScClient(url: url, protocols: ["chat","superchat"])
 ```
