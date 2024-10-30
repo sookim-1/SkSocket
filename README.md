@@ -21,7 +21,7 @@ Add the following to the dependencies section of your Package.swift:
 
  ```swift
 dependencies: [
-    .package(url: "https://github.com/sacOO7/socketcluster-client-swift.git", from: "1.0.0")
+    .package(url: "https://github.com/sookim-1/socketcluster-client-swift-native.git", from: "1.0.7")
 ]
 ```
 
