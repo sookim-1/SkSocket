@@ -13,6 +13,12 @@ public typealias AckEventNameHandler = (String, AnyObject?, AnyObject?) -> Void
 // error, data
 public typealias AckHandler = (AnyObject?, AnyObject?) -> Void
 
+// eventName, data
+public typealias OnEventHandler = (String, AnyObject?) -> Void
+
+// eventName, data, ack
+public typealias AckOnEventHandler = (String, AnyObject?, AckHandler) -> Void
+
 public enum WebSocketError: Error {
 
     case invalid

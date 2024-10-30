@@ -10,13 +10,13 @@ import Foundation
 public class Listener: NSObject {
 
     var emitAckListener: [Int: (String, AckEventNameHandler)]
-    var onListener: [String: (String, AnyObject?) -> Void]
-    var onAckListener: [String: (String, AnyObject?, AckHandler) -> Void]
+    var onListener: [String: OnEventHandler]
+    var onAckListener: [String: AckOnEventHandler]
 
     public override init() {
-        emitAckListener = [Int : (String, AckEventNameHandler)]()
-        onListener = [String : (String, AnyObject?) -> Void]()
-        onAckListener = [String: (String, AnyObject?, AckHandler) -> Void]()
+        emitAckListener = [Int: (String, AckEventNameHandler)]()
+        onListener = [String: OnEventHandler]()
+        onAckListener = [String: AckOnEventHandler]()
     }
 
     func putEmitAck(id: Int, eventName: String, ack: @escaping AckEventNameHandler) {
@@ -31,7 +31,7 @@ public class Listener: NSObject {
         }
     }
 
-    func putOnListener(eventName: String, onListener: @escaping (String, AnyObject?) -> Void) {
+    func putOnListener(eventName: String, onListener: @escaping OnEventHandler) {
         self.onListener[eventName] = onListener
     }
 
@@ -41,7 +41,7 @@ public class Listener: NSObject {
         }
     }
 
-    func putOnAckListener(eventName: String, onAckListener: @escaping (String, AnyObject?, AckHandler) -> Void) {
+    func putOnAckListener(eventName: String, onAckListener: @escaping AckOnEventHandler) {
         self.onAckListener[eventName] = onAckListener
     }
 

@@ -135,15 +135,15 @@ extension ScClient {
         self.socket.send(.string(publishObject.toJSONString()!), completionHandler: completionHandler)
     }
 
-    public func onChannel(channelName: String, ack: @escaping (String, AnyObject?) -> Void) {
+    public func onChannel(channelName: String, ack: @escaping OnEventHandler) {
         putOnListener(eventName: channelName, onListener: ack)
     }
 
-    public func on(eventName: String, ack: @escaping (String, AnyObject?) -> Void) {
+    public func on(eventName: String, ack: @escaping OnEventHandler) {
         putOnListener(eventName: eventName, onListener: ack)
     }
 
-    public func onAck(eventName: String, ack: @escaping (String, AnyObject?, AckHandler) -> Void) {
+    public func onAck(eventName: String, ack: @escaping AckOnEventHandler) {
         putOnAckListener(eventName: eventName, onAckListener: ack)
     }
 
