@@ -56,3 +56,12 @@ public enum WebSocketError: Error {
     }
 
 }
+
+public enum AsyncScClientError: Error {
+    case connectionError
+    case transportError
+    case encodingError
+    case decodingError
+    case disconnected
+    case closed
+}

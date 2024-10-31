@@ -46,10 +46,8 @@ public final class AtomicInteger {
 
 }
 
- /*
-
 // MARK: - actor 로 스레드 안전성 처리
-actor AtomicInteger {
+actor AtomicIntegerActor {
     private var value: Int
 
     public init(value: Int = 0) {
@@ -74,4 +72,3 @@ actor AtomicInteger {
         value = newValue
     }
 }
-*/
