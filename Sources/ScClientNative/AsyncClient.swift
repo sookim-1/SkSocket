@@ -48,6 +48,7 @@ public class AsyncScClient: Listener {
 
     public func disconnect() {
         self.socket?.cancel()
+        self.socket = nil
     }
 
     public func setAuthToken(token: String) {
@@ -85,57 +86,57 @@ extension AsyncScClient {
             (error: AnyObject?, data: AnyObject?) in
             Task {
                 let ackObject = Model.getReceiveEventObject(data: JSONConverter.jsonString(from: data), error: JSONConverter.jsonString(from: error), messageId: cid)
-                try await self.socket?.send(.string(ackObject.toJSONString()!))
+                try await self.sendDataJSONString(ackObject)
             }
         }
     }
 
     public func emit<T: Encodable>(eventName: String, data: T?) async throws {
         let emitObject = Model.getEmitEventObject(eventName: eventName, data: data, messageId: await counter.incrementAndGet())
-        try await self.socket?.send(.string(emitObject.toJSONString()!))
+        try await self.sendDataJSONString(emitObject)
     }
 
     public func emitAck<T: Encodable>(eventName: String, data: T?, ack: @escaping AckEventNameHandler) async throws {
         let id = await counter.incrementAndGet()
         let emitObject = Model.getEmitEventObject(eventName: eventName, data: data, messageId: id)
         putEmitAck(id: id, eventName: eventName, ack: ack)
-        try await self.socket?.send(.string(emitObject.toJSONString()!))
+        try await self.sendDataJSONString(emitObject)
     }
 
     public func subscribe(channelName: String, token: String? = nil) async throws {
         let subscribeObject = Model.getSubscribeEventObject(channelName: channelName, messageId: await counter.incrementAndGet(), token : token)
-        try await self.socket?.send(.string(subscribeObject.toJSONString()!))
+        try await self.sendDataJSONString(subscribeObject)
     }
 
     public func subscribeAck(channelName: String, token: String? = nil, ack: @escaping AckEventNameHandler) async throws {
         let id = await counter.incrementAndGet()
         let subscribeObject = Model.getSubscribeEventObject(channelName: channelName, messageId: id, token: token)
         putEmitAck(id: id, eventName: channelName, ack: ack)
-        try await self.socket?.send(.string(subscribeObject.toJSONString()!))
+        try await self.sendDataJSONString(subscribeObject)
     }
 
     public func unsubscribe(channelName: String) async throws {
         let unsubscribeObject = Model.getUnsubscribeEventObject(channelName: channelName, messageId: await counter.incrementAndGet())
-        try await self.socket?.send(.string(unsubscribeObject.toJSONString()!))
+        try await self.sendDataJSONString(unsubscribeObject)
     }
 
     public func unsubscribeAck(channelName: String, ack: @escaping AckEventNameHandler) async throws {
         let id = await counter.incrementAndGet()
         let unsubscribeObject = Model.getUnsubscribeEventObject(channelName: channelName, messageId: id)
         putEmitAck(id: id, eventName: channelName, ack: ack)
-        try await self.socket?.send(.string(unsubscribeObject.toJSONString()!))
+        try await self.sendDataJSONString(unsubscribeObject)
     }
 
     public func publish<T: Encodable>(channelName: String, data: T?) async throws {
         let publishObject = Model.getPublishEventObject(channelName: channelName, data: data, messageId: await counter.incrementAndGet())
-        try await self.socket?.send(.string(publishObject.toJSONString()!))
+        try await self.sendDataJSONString(publishObject)
     }
 
     public func publishAck<T: Encodable>(channelName: String, data: T?, ack: @escaping AckEventNameHandler) async throws {
         let id = await counter.incrementAndGet()
         let publishObject = Model.getPublishEventObject(channelName: channelName, data: data, messageId: id)
         putEmitAck(id: id, eventName: channelName, ack: ack)
-        try await self.socket?.send(.string(publishObject.toJSONString()!))
+        try await self.sendDataJSONString(publishObject)
     }
 
     public func onChannel(channelName: String, ack: @escaping OnEventHandler) {
@@ -162,28 +163,68 @@ extension AsyncScClient {
         try await self.socket?.send(.string(""))
     }
 
-    func receive() -> AsyncThrowingStream<Void, Error> {
+    private func sendDataJSONString<T: Encodable>(_ message: T) async throws {
+        guard let messageData = message.toJSONString()
+        else { throw AsyncScClientError.encodingError }
+
+        do {
+            try await socket?.send(.string(messageData))
+        } catch {
+            switch socket?.closeCode {
+                case .invalid:
+                    throw AsyncScClientError.connectionError
+                case .goingAway:
+                    throw AsyncScClientError.disconnected
+                case .normalClosure:
+                    throw AsyncScClientError.closed
+                default:
+                    throw AsyncScClientError.transportError
+            }
+        }
+    }
+
+    public func receiveSocket() -> AsyncThrowingStream<Data, Error> {
         AsyncThrowingStream { [weak self] in
             guard let self
-            else { return }
+            else { return nil }
 
-            let message: () = try await self.receiveSingleMessage()
+            let message = try await self.receiveOnce()
 
             return Task.isCancelled ? nil : message
         }
     }
 
-    private func receiveSingleMessage() async throws {
-        let receiveData = try await socket?.receive()
+    private func receiveOnce() async throws -> Data {
+        do {
+            return try await receiveSingleMessage()
+        } catch let error as AsyncScClientError {
+            throw error
+        } catch {
+            switch socket?.closeCode {
+                case .invalid:
+                    throw AsyncScClientError.connectionError
+                case .goingAway:
+                    throw AsyncScClientError.disconnected
+                case .normalClosure:
+                    throw AsyncScClientError.closed
+                default:
+                    throw AsyncScClientError.transportError
+            }
+        }
+    }
 
-        switch receiveData {
-        case .data(let data):
-            self.websocketDidReceiveData(data: data)
-        case .string(let string):
-            try await self.websocketDidReceiveMessage(text: string)
-        default:
-            self.socket?.cancel(with: .unsupportedData, reason: nil)
-            throw AsyncScClientError.decodingError
+    private func receiveSingleMessage() async throws -> Data {
+        switch try await socket?.receive() {
+            case let .data(messageData):
+                return messageData
+            case let .string(text):
+                guard let messageData = text.data(using: .utf8)
+                else { throw AsyncScClientError.decodingError }
+
+                return messageData
+            @unknown default:
+                self.disconnect()
+                throw AsyncScClientError.decodingError
         }
     }
 
@@ -237,7 +278,6 @@ extension AsyncScClient: URLSessionWebSocketDelegate {
         Task {
             await counter.setValue(0)
             try await self.sendHandShake()
-            self.receive()
             self.onConnect?(self)
             self.onConnectPublisher.send(self)
         }
