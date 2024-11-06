@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 public class AsyncScClient: Listener {
 
@@ -20,6 +21,12 @@ public class AsyncScClient: Listener {
     var onDisconnect: ((AsyncScClient, Error?)-> Void)?
     var onSetAuthentication: ((AsyncScClient, String?)-> Void)?
     var onAuthentication: ((AsyncScClient, Bool?)-> Void)?
+
+    public let onConnectPublisher = PassthroughSubject<AsyncScClient, Never>()
+    public let onConnectErrorPublisher = PassthroughSubject<(AsyncScClient, Error?), Never>()
+    public let onDisconnectPublisher = PassthroughSubject<(AsyncScClient, Error?), Never>()
+    public let onSetAuthenticationPublisher = PassthroughSubject<(AsyncScClient, String?), Never>()
+    public let onAuthenticationPublisher = PassthroughSubject<(AsyncScClient, Bool?), Never>()
 
     public init(url: String, authToken: String? = nil, protocols: [String] = []) {
         self.counter = AtomicIntegerActor()
@@ -189,7 +196,8 @@ extension AsyncScClient {
             switch parseResult {
             case .isAuthenticated:
                 let isAuthenticated = ClientUtils.getIsAuthenticated(message: messageObject)
-                onAuthentication?(self, isAuthenticated)
+                self.onAuthentication?(self, isAuthenticated)
+                self.onAuthenticationPublisher.send((self, isAuthenticated))
             case .publish:
                 guard let dictionary = data as? [String: Any],
                       let channelName = dictionary["channel"] as? String,
@@ -203,6 +211,7 @@ extension AsyncScClient {
             case .setToken:
                 authToken = ClientUtils.getAuthToken(message: messageObject)
                 self.onSetAuthentication?(self, authToken)
+                self.onSetAuthenticationPublisher.send((self, authToken))
             case .ackReceive:
                 handleEmitAck(id: rid!, error: error as AnyObject, data: data as AnyObject)
             case .event:
@@ -230,11 +239,13 @@ extension AsyncScClient: URLSessionWebSocketDelegate {
             try await self.sendHandShake()
             self.receive()
             self.onConnect?(self)
+            self.onConnectPublisher.send(self)
         }
     }
 
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         self.onDisconnect?(self, WebSocketError.findMatchError(closeCode: closeCode.rawValue))
+        self.onDisconnectPublisher.send((self, WebSocketError.findMatchError(closeCode: closeCode.rawValue)))
     }
 
 }
