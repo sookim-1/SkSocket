@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "ScClientNative"
-  s.version      = "1.0.11"
+  s.version      = "1.0.12"
   s.summary      = "Native iOS/macOS client written in Swift 4/Swift 5 and using first-party only Resource"
   s.swift_version = '5.5'
 
